@@ -1,0 +1,4 @@
+numpy
+nes_py
+matplotlib
+stable_retro

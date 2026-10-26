@@ -1,0 +1,24 @@
+**/*.nes
+**/*.pal
+**/*.asm
+**/*.lst
+**/*.so
+**/*.fm2
+!benchmark/*.fm2
+benchmark/*.jsonl
+!readme_results.jsonl
+
+dev/
+tests/
+.vscode/
+.cache/
+build/
+__pycache__/
+*.egg-info/
+.venv/
+
+perf.data
+perf.data.old
+
+# must be excluded to avoid legal issues:
+game_data.hpp

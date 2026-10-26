@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smb_native"
+version = "0.1.0"
+description = "Python wrapper for smb_native C++ library"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+build = ["pybind11>=3.0"] # for cmake when BUILD_PYTHON_BINDINGS=ON
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+packages = ["smb_native"]
+
+[tool.setuptools.package-data]
+smb_native = ["*.so", "*.pyi", "py.typed"]
