@@ -10,6 +10,8 @@ benchmark/*.jsonl
 
 dev/
 tests/
+examples/
+
 .vscode/
 .cache/
 build/
