@@ -163,6 +163,11 @@ struct alignas(64) SMBEnv {
         return ram[Player_Rel_XPos];
     }
 
+    // dummy call to initialize the reset presets and avoid Reset() being slow when first called
+    static void InitResetPresets() noexcept {
+        (void)ResetPresets();
+    }
+
     // function used to copy the current env state to another instance
     // this is equivalent to C++ assignment copy operator, but implemented
     // as a function for clarity and for python usage
@@ -181,11 +186,6 @@ private:
 
     // defined in presets.cpp
     static const std::array<SMBEnv, PresetsCount>& ResetPresets() noexcept;
-
-    // dummy call to initialize the reset presets and avoid Reset() being slow when first called
-    static void InitResetPresets() noexcept {
-        (void)ResetPresets();
-    }
     
     // private utilities:
     int ReadRangeRAM(uint16_t startAddress, uint16_t length) const {

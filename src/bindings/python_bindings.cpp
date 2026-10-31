@@ -128,6 +128,8 @@ NB_MODULE(__smb_native__, m) {
     m.doc() =
         "Bindings for the Super Mario Bros. Environment (Low Level API).\n"
         "Do not use this library directly, use `smb_native`.";
+    
+    SMBEnv::InitResetPresets(); // avoids first reset() being slow
 
     // m.attr("SCREEN_WIDTH") = int(SCREEN_WIDTH);
     // m.attr("SCREEN_HEIGHT") = int(SCREEN_HEIGHT);
