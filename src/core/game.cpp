@@ -1,4 +1,4 @@
-#include <smb/core/environment.hpp>
+#include <smb/core/core.hpp>
 #include <smb/data/constants.hpp>
 #include <smb/data/game_data.hpp>
 #include <cstddef>
@@ -25,11 +25,20 @@
         goto *returnStack[--retID]; \
     } while (0)
 
-// Credits to the authors of the disassembly: https://gist.github.com/1wErt3r/4048722
+// wrappers of SMBEnv
+void SMBEnv::FirstReset() noexcept {
+    SMBCore {*this}.FirstReset();
+}
+
+void SMBEnv::NMI(uint8_t input) noexcept {
+    SMBCore {*this}.NMI(input);
+}
+
+// Huge thanks to the authors of the disassembly: https://gist.github.com/1wErt3r/4048722
 
 // reset env (aka "Start")
 // this is only called once in ResetPresets() init
-void SMBEnv::FirstReset() noexcept {
+void SMBCore::FirstReset() noexcept {
     void* returnStack[2]; // for JSR calls
     size_t retID = 0;
 
@@ -173,7 +182,7 @@ WritePPUReg1:
 }
 
 // step env (aka "NonMaskableInterrupt")
-void SMBEnv::Step() noexcept {
+void SMBCore::NMI(uint8_t input) noexcept {
     void* returnStack[50]; // for JSR calls - TODO: reduce this
     size_t retID = 0;
     bool bitFlag = false; // used to simulate .db 0x2c skips
@@ -228,7 +237,7 @@ InitBuffer:
     ppu.WritePPU_Mask(cpu.A);
     
     // CALL(SoundEngine); // sfx and music is completely skipped
-    ReadJoypads(); // read input from inputs
+    ReadJoypads(input); // read input
     CALL(PauseRoutine);
     CALL(UpdateTopScore);
 
