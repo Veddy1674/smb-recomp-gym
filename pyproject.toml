@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=77"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=0.11", "nanobind>=2.0"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "smb_native"
@@ -13,11 +13,10 @@ license-files = ["LICENSE"]
 dependencies = ["numpy"]
 
 [project.optional-dependencies]
-build = ["pybind11>=3.0"] # for cmake when BUILD_PYTHON_BINDINGS=ON
+dev = ["scikit-build-core>=0.11", "nanobind>=2.0"] # for editable installs with --no-build-isolation
 
-[tool.setuptools]
-package-dir = {"" = "python"}
-packages = ["smb_native"]
-
-[tool.setuptools.package-data]
-smb_native = ["*.so", "*.pyi", "py.typed"]
+[tool.scikit-build]
+wheel.packages = ["python/smb_native"]
+build-dir = "build/skbuild" # caches the build between installs
+sdist.exclude = ["assets/*.nes", "include/smb/data/game_data.hpp"]
+cmake.define = { BUILD_PYTHON_BINDINGS = "ON", BUILD_CPP_LIBRARY = "OFF" }
