@@ -3,6 +3,7 @@
 **/*.asm
 **/*.lst
 **/*.so
+**/*.pyi
 **/*.fm2
 !benchmark/*.fm2
 benchmark/*.jsonl
