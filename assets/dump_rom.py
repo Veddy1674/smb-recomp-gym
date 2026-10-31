@@ -122,13 +122,6 @@ if __name__ == "__main__":
     INCLUDE_DATA = ROOT / "include" / "smb" / "data"
     OUT = INCLUDE_DATA / "game_data.hpp"
 
-    pre_hash = ""
-    if OUT.exists():
-        try:
-            pre_hash = sha1(OUT.read_bytes())
-        except Exception as e:
-            print(f"An exception occurred while trying to read '{OUT}': {e}")
-
     # custom json file that only contains the indexes at which
     # the data arrays are found in prg_rom_data (and their size)
     MANIFEST = INCLUDE_DATA / "rom_manifest.json"
@@ -139,14 +132,4 @@ if __name__ == "__main__":
     if not write_cpp_file(OUT, MANIFEST, prg_rom, chr_rom):
         sys.exit(1)
 
-    post_hash = ""
-    try:
-        post_hash = sha1(OUT.read_bytes())
-    except Exception as e:
-        print(f"An exception occurred while trying to read '{OUT}': {e}")
-
-    if pre_hash == post_hash:
-        # 'OUT' is re-created regardless
-        print("ROM was already extracted!")
-    else:
-        print("ROM extracted successfully!")
+    print("ROM extracted successfully!")
