@@ -1,4 +1,4 @@
-#include <smb/core/environment.hpp>
+#include <smb/core/env.hpp>
 #include <smb/data/game_data.hpp>
 #include <smb/core/renderer.hpp>
 #include <cstring>
@@ -173,7 +173,7 @@ void PPUState::RenderSpritesRGBA(int firstSlot, int count, const Sprite& s, uint
 }
 
 template <RenderMode M>
-void PPUState::RenderFrame(uint8_t* outputBuffer) const noexcept {
+void PPUState::RenderFrame(uint8_t* buffer) const noexcept {
     constexpr size_t bytesPerPixel = ChannelsOf(M);
 
     const bool bgOn = mask & 0x08; // background enabled
@@ -343,26 +343,26 @@ void PPUState::RenderFrame(uint8_t* outputBuffer) const noexcept {
                 }
             }
 
-            EmitLine<M>(outputBuffer + size_t(y) * SCREEN_WIDTH * bytesPerPixel, line);
+            EmitLine<M>(buffer + size_t(y) * SCREEN_WIDTH * bytesPerPixel, line);
         }
     }
 }
 
-void SMBEnv::MakeFrame(uint8_t* outputBuffer, RenderMode mode) const noexcept {
+void SMBEnv::RenderFrame(uint8_t* buffer, RenderMode mode) const noexcept {
 
-    if (!outputBuffer) return;
+    if (!buffer) return;
 
     switch (mode) {
         case RenderMode::Indexed:
-            ppu.RenderFrame<RenderMode::Indexed>(outputBuffer);
+            ppu.RenderFrame<RenderMode::Indexed>(buffer);
             break;
 
         case RenderMode::RGB:
-            ppu.RenderFrame<RenderMode::RGB>(outputBuffer);
+            ppu.RenderFrame<RenderMode::RGB>(buffer);
             break;
 
         case RenderMode::Grayscale:
-            ppu.RenderFrame<RenderMode::Grayscale>(outputBuffer);
+            ppu.RenderFrame<RenderMode::Grayscale>(buffer);
             break;
     }
 }
