@@ -124,7 +124,7 @@ static std::tuple<Frame, int, int> NewSprite(const Sprite& sprite, Render render
 }
 
 // module:
-NB_MODULE(__smb_native__, m) {
+NB_MODULE(_smb_native, m) {
     m.doc() =
         "Bindings for the Super Mario Bros. Environment (Low Level API).\n"
         "Do not use this library directly, use `smb_native`.";

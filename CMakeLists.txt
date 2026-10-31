@@ -142,7 +142,7 @@ if(BUILD_CPP_LIBRARY)
     )
 endif()
 
-# python module '__smb_native__'
+# python module '_smb_native'
 if(BUILD_PYTHON_BINDINGS)
     # find nanobind python library
     execute_process(
@@ -156,33 +156,33 @@ if(BUILD_PYTHON_BINDINGS)
 
     find_package(nanobind CONFIG REQUIRED)
 
-    nanobind_add_module(__smb_native__ NB_STATIC NOMINSIZE
+    nanobind_add_module(_smb_native NB_STATIC NOMINSIZE
         src/bindings/python_bindings.cpp
         $<TARGET_OBJECTS:smb_core>
     )
 
-    target_include_directories(__smb_native__ PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    target_include_directories(_smb_native PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
     if(OpenMP_CXX_FOUND)
-        target_link_libraries(__smb_native__ PRIVATE OpenMP::OpenMP_CXX)
+        target_link_libraries(_smb_native PRIVATE OpenMP::OpenMP_CXX)
     endif()
 
-    set_target_properties(__smb_native__ PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${SMB_IPO_OK})
+    set_target_properties(_smb_native PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${SMB_IPO_OK})
 
     if(SKBUILD)
         # pip build (scikit-build-core): installed into the wheel, the committed .pyi is packaged from python/
-        install(TARGETS __smb_native__ LIBRARY DESTINATION smb_native)
+        install(TARGETS _smb_native LIBRARY DESTINATION smb_native)
     else()
         # plain cmake dev build: drop module and stub straight into the source tree
-        set_target_properties(__smb_native__ PROPERTIES
+        set_target_properties(_smb_native PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native"
         )
 
         # .pyi generation
         nanobind_add_stub(smb_stub
-            MODULE __smb_native__
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native/__smb_native__.pyi
-            PYTHON_PATH $<TARGET_FILE_DIR:__smb_native__>
-            DEPENDS __smb_native__
+            MODULE _smb_native
+            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native/_smb_native.pyi
+            PYTHON_PATH $<TARGET_FILE_DIR:_smb_native>
+            DEPENDS _smb_native
         )
     endif()
 endif()
