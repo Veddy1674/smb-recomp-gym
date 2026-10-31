@@ -68,29 +68,6 @@ struct SMBCore {
         cpu.setZN(reg = ram[res_addr]);
     }
 
-    void LDA_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
-        cpu.setZN(cpu.A = ram[res_addr]);
-    }
-
-    void LDA_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-
-        cpu.setZN(cpu.A = ram[res_addr]);
-    }
-
-    // old implementation that only reads from PRG_ROM_DATA, it could work in cases where LDA_Dyn_ind_y
-    // exclusively reads from ROM DATA and not RAM in the same instruction (and vice versa with LDA_ind_y)
-    // void LDA_PRG_ind_y(uint8_t addr) noexcept {
-    //     uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-    //     uint16_t res_addr = base + cpu.Y;
-
-    //     cpu.setZN(cpu.A = PRG_ROM_DATA[res_addr - 0x8000]);
-    // }
-
     // read RAM or PRG dynamically
     void LDA_Dyn_ind_y(uint8_t addr) noexcept {
         uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
@@ -119,13 +96,6 @@ struct SMBCore {
 
     void STA_abs_xy(uint16_t addr, uint8_t& offsetReg) noexcept {
         uint16_t res_addr = addr + offsetReg;
-        ram[res_addr] = cpu.A;
-    }
-
-    void STA_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
         ram[res_addr] = cpu.A;
     }
 
@@ -175,26 +145,6 @@ struct SMBCore {
 
     void CMPA_PRGTable(const uint8_t* table, uint8_t regAddr) noexcept {
         uint8_t val = table[regAddr];
-        uint8_t res = cpu.A - val; // avoid int casting
-        cpu.setZN(res);
-        cpu.setC(cpu.A, val);
-    }
-
-    void CMPA_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
-        uint8_t val = ram[res_addr];
-        uint8_t res = cpu.A - val; // avoid int casting
-        cpu.setZN(res);
-        cpu.setC(cpu.A, val);
-    }
-
-    void CMPA_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-
-        uint8_t val = ram[res_addr];
         uint8_t res = cpu.A - val; // avoid int casting
         cpu.setZN(res);
         cpu.setC(cpu.A, val);
@@ -292,20 +242,6 @@ struct SMBCore {
         cpu.setZN(cpu.A |= table[regAddr]);
     }
 
-    void ORA_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
-        cpu.setZN(cpu.A |= ram[res_addr]);
-    }
-
-    void ORA_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-
-        cpu.setZN(cpu.A |= ram[res_addr]);
-    }
-
     // AND
     void AND_imm(uint8_t val) noexcept {
         cpu.setZN(cpu.A &= val);
@@ -313,11 +249,6 @@ struct SMBCore {
 
     void AND_zp(uint8_t addr) noexcept {
         cpu.setZN(cpu.A &= ram[addr]);
-    }
-
-    void AND_zp_xy(uint8_t addr, uint8_t& offsetReg) noexcept {
-        uint8_t res_addr = (addr + offsetReg) & 0xFF; // wraps in zero page
-        cpu.setZN(cpu.A &= ram[res_addr]);
     }
 
     void AND_abs(uint16_t addr) noexcept {
@@ -334,20 +265,6 @@ struct SMBCore {
         cpu.setZN(cpu.A &= val);
     }
 
-    void AND_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
-        cpu.setZN(cpu.A &= ram[res_addr]);
-    }
-
-    void AND_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-
-        cpu.setZN(cpu.A &= ram[res_addr]);
-    }
-
     // EOR
     void EOR_imm(uint8_t val) noexcept {
         cpu.setZN(cpu.A ^= val);
@@ -355,34 +272,6 @@ struct SMBCore {
 
     void EOR_zp(uint8_t addr) noexcept {
         cpu.setZN(cpu.A ^= ram[addr]);
-    }
-
-    void EOR_zp_xy(uint8_t addr, uint8_t& offsetReg) noexcept {
-        uint8_t res_addr = (addr + offsetReg) & 0xFF; // wraps in zero page
-        cpu.setZN(cpu.A ^= ram[res_addr]);
-    }
-
-    void EOR_abs(uint16_t addr) noexcept {
-        cpu.setZN(cpu.A ^= ram[addr]);
-    }
-
-    void EOR_abs_xy(uint16_t addr, uint8_t& offsetReg) noexcept {
-        uint16_t res_addr = addr + offsetReg;
-        cpu.setZN(cpu.A ^= ram[res_addr]);
-    }
-
-    void EOR_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF; // wraps in zero page
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-
-        cpu.setZN(cpu.A ^= ram[res_addr]);
-    }
-
-    void EOR_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-
-        cpu.setZN(cpu.A ^= ram[res_addr]);
     }
 
     // PHA and PLA
@@ -400,26 +289,9 @@ struct SMBCore {
         cpu.setZN(cpu.A <<= 1);
     }
 
-    void ASL_zp(uint8_t addr) noexcept {
-        cpu.flag_C = (ram[addr] >> 7) & 1;
-        cpu.setZN(ram[addr] <<= 1);
-    }
-
-    void ASL_zp_x(uint8_t addr) noexcept {
-        uint8_t res_addr = (addr + cpu.X) & 0xFF;
-        cpu.flag_C = (ram[res_addr] >> 7) & 1;
-        cpu.setZN(ram[res_addr] <<= 1);
-    }
-
     void ASL_abs(uint16_t addr) noexcept {
         cpu.flag_C = (ram[addr] >> 7) & 1;
         cpu.setZN(ram[addr] <<= 1);
-    }
-
-    void ASL_abs_x(uint16_t addr) noexcept {
-        uint16_t res_addr = addr + cpu.X;
-        cpu.flag_C = (ram[res_addr] >> 7) & 1;
-        cpu.setZN(ram[res_addr] <<= 1);
     }
 
     // LSR
@@ -433,21 +305,9 @@ struct SMBCore {
         cpu.setZN(ram[addr] >>= 1);
     }
 
-    void LSR_zp_x(uint8_t addr) noexcept {
-        uint8_t res_addr = (addr + cpu.X) & 0xFF;
-        cpu.flag_C = ram[res_addr] & 1;
-        cpu.setZN(ram[res_addr] >>= 1);
-    }
-
     void LSR_abs(uint16_t addr) noexcept {
         cpu.flag_C = ram[addr] & 1;
         cpu.setZN(ram[addr] >>= 1);
-    }
-
-    void LSR_abs_x(uint16_t addr) noexcept {
-        uint16_t res_addr = addr + cpu.X;
-        cpu.flag_C = ram[res_addr] & 1;
-        cpu.setZN(ram[res_addr] >>= 1);
     }
 
     // ROL
@@ -467,30 +327,12 @@ struct SMBCore {
         cpu.setZN(ram[addr]);
     }
 
-    void ROL_zp_x(uint8_t addr) noexcept {
-        uint8_t res_addr = (addr + cpu.X) & 0xFF;
-        bool oldCarry = cpu.flag_C;
-
-        cpu.flag_C = (ram[res_addr] >> 7) & 1;
-        ram[res_addr] = (ram[res_addr] << 1) | oldCarry;
-        cpu.setZN(ram[res_addr]);
-    }
-
     void ROL_abs(uint16_t addr) noexcept {
         bool oldCarry = cpu.flag_C;
 
         cpu.flag_C = (ram[addr] >> 7) & 1;
         ram[addr] = (ram[addr] << 1) | oldCarry;
         cpu.setZN(ram[addr]);
-    }
-
-    void ROL_abs_x(uint16_t addr) noexcept {
-        uint16_t res_addr = addr + cpu.X;
-        bool oldCarry = cpu.flag_C;
-
-        cpu.flag_C = (ram[res_addr] >> 7) & 1;
-        ram[res_addr] = (ram[res_addr] << 1) | oldCarry;
-        cpu.setZN(ram[res_addr]);
     }
 
     // ROR
@@ -500,23 +342,6 @@ struct SMBCore {
         cpu.flag_C = cpu.A & 1;
         cpu.A = (cpu.A >> 1) | (oldCarry << 7);
         cpu.setZN(cpu.A);
-    }
-
-    void ROR_zp(uint8_t addr) noexcept {
-        bool oldCarry = cpu.flag_C;
-
-        cpu.flag_C = ram[addr] & 1;
-        ram[addr] = (ram[addr] >> 1) | (oldCarry << 7);
-        cpu.setZN(ram[addr]);
-    }
-
-    void ROR_zp_x(uint8_t addr) noexcept {
-        uint8_t res_addr = (addr + cpu.X) & 0xFF;
-        bool oldCarry = cpu.flag_C;
-
-        cpu.flag_C = ram[res_addr] & 1;
-        ram[res_addr] = (ram[res_addr] >> 1) | (oldCarry << 7);
-        cpu.setZN(ram[res_addr]);
     }
 
     void ROR_abs(uint16_t addr) noexcept {
@@ -600,26 +425,6 @@ struct SMBCore {
         cpu.setZN(cpu.A);
     }
 
-    void ADC_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF;
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-        uint16_t sum = cpu.A + ram[res_addr] + cpu.flag_C;
-
-        cpu.flag_C = sum > 0xFF;
-        cpu.A = sum & 0xFF;
-        cpu.setZN(cpu.A);
-    }
-
-    void ADC_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-        uint16_t sum = cpu.A + ram[res_addr] + cpu.flag_C;
-
-        cpu.flag_C = sum > 0xFF;
-        cpu.A = sum & 0xFF;
-        cpu.setZN(cpu.A);
-    }
-
     // SBC
     void SBC_imm(uint8_t val) noexcept {
         uint16_t sum = cpu.A + static_cast<uint8_t>(~val) + cpu.flag_C;
@@ -675,26 +480,6 @@ struct SMBCore {
     void SBC_PRGTable(const uint8_t* table, uint8_t regAddr) noexcept {
         uint8_t val = table[regAddr];
         uint16_t sum = cpu.A + static_cast<uint8_t>(~val) + cpu.flag_C;
-
-        cpu.flag_C = sum > 0xFF;
-        cpu.A = sum & 0xFF;
-        cpu.setZN(cpu.A);
-    }
-
-    void SBC_ind_x(uint8_t addr) noexcept {
-        uint8_t ptr = (addr + cpu.X) & 0xFF;
-        uint16_t res_addr = ram[ptr] | (ram[(ptr + 1) & 0xFF] << 8);
-        uint16_t sum = cpu.A + static_cast<uint8_t>(~ram[res_addr]) + cpu.flag_C;
-
-        cpu.flag_C = sum > 0xFF;
-        cpu.A = sum & 0xFF;
-        cpu.setZN(cpu.A);
-    }
-
-    void SBC_ind_y(uint8_t addr) noexcept {
-        uint16_t base = ram[addr] | (ram[(addr + 1) & 0xFF] << 8);
-        uint16_t res_addr = base + cpu.Y;
-        uint16_t sum = cpu.A + static_cast<uint8_t>(~ram[res_addr]) + cpu.flag_C;
 
         cpu.flag_C = sum > 0xFF;
         cpu.A = sum & 0xFF;
