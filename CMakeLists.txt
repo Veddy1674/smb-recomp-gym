@@ -28,7 +28,7 @@ if(NOT BUILD_PYTHON_BINDINGS AND NOT BUILD_CPP_LIBRARY)
 endif()
 
 # remove unused/unreachable code in the recompiled code (might add 1-2% of performance)
-option(REMOVE_RESIDUAL "Toggle removal of unused/unreachable code in environment.cpp" ON)
+option(REMOVE_RESIDUAL "Toggle removal of unused/unreachable code in game.cpp" ON)
 
 # flags (NOTE: -march=native is on by default because the build is never redistributed anyway)
 if(MSVC)
@@ -91,9 +91,9 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "src/bindings/.*")
 # C++ native module 'smb_core'
 add_library(smb_core OBJECT ${CORE_SOURCES})
 
-# add special flags to environment.cpp (gcc only, clang ignores/warns on these)
+# add special flags to game.cpp (gcc only, clang ignores/warns on these)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set_source_files_properties(src/core/environment.cpp PROPERTIES
+    set_source_files_properties(src/core/game.cpp PROPERTIES
         COMPILE_OPTIONS "-falign-labels=1;-falign-jumps=1;-falign-loops=1;-fno-gcse"
     )
 endif()
@@ -117,6 +117,10 @@ endif()
 # shared C++ library for C++ integration
 if(BUILD_CPP_LIBRARY)
     add_library(smb_native SHARED $<TARGET_OBJECTS:smb_core>)
+
+    # require C++20
+    target_compile_features(smb_native PUBLIC cxx_std_20)
+
     target_include_directories(smb_native PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
@@ -130,14 +134,27 @@ if(BUILD_CPP_LIBRARY)
     # rules to install C++ library
     include(GNUInstallDirs)
 
+    # installing the library and cmake package config
     install(TARGETS smb_native
+        EXPORT smb_nativeTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 
+    install(EXPORT smb_nativeTargets
+        NAMESPACE smb_native::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/smb_native
+    )
+
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/smb_nativeConfig.cmake
+        "include(\"\${CMAKE_CURRENT_LIST_DIR}/smb_nativeTargets.cmake\")\n")
+    
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/smb_nativeConfig.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/smb_native)
+
     # install include/ to system include dir
     install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        PATTERN "game_data.hpp" EXCLUDE
+        # game_data.hpp is also installed, mustn't be distributed
         PATTERN "rom_manifest.json" EXCLUDE
     )
 endif()
@@ -169,20 +186,35 @@ if(BUILD_PYTHON_BINDINGS)
     set_target_properties(_smb_native PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${SMB_IPO_OK})
 
     if(SKBUILD)
-        # pip build (scikit-build-core): installed into the wheel, the committed .pyi is packaged from python/
+        # pip build (scikit-build-core): installed into the wheel, .pyi is auto-generated
         install(TARGETS _smb_native LIBRARY DESTINATION smb_native)
+        set(STUB_OUT ${CMAKE_CURRENT_BINARY_DIR}/_smb_native.pyi)
     else()
         # plain cmake dev build: drop module and stub straight into the source tree
         set_target_properties(_smb_native PROPERTIES
             LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native"
         )
+        set(STUB_OUT ${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native/_smb_native.pyi)
+    endif()
 
-        # .pyi generation
-        nanobind_add_stub(smb_stub
-            MODULE _smb_native
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native/_smb_native.pyi
-            PYTHON_PATH $<TARGET_FILE_DIR:_smb_native>
-            DEPENDS _smb_native
+    # .pyi generation
+    nanobind_add_stub(smb_stub
+        MODULE _smb_native
+        OUTPUT ${STUB_OUT}
+        PYTHON_PATH $<TARGET_FILE_DIR:_smb_native>
+        DEPENDS _smb_native
+    )
+
+    # dev/editable only: copy the stub next to the python sources for IDE autocomplete
+    if(NOT SKBUILD OR SKBUILD_STATE STREQUAL "editable")
+        add_custom_command(TARGET smb_stub POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${STUB_OUT}
+                ${CMAKE_CURRENT_SOURCE_DIR}/python/smb_native/_smb_native.pyi
         )
+    endif()
+
+    if(SKBUILD)
+        install(FILES ${STUB_OUT} DESTINATION smb_native)
     endif()
 endif()
