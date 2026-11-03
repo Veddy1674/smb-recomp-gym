@@ -10,7 +10,13 @@ More info in the `smb_native.gym_env` module itself.
 """
 
 try:
-    from ._smb_native import *
+    """
+    the .so is only installed into the site-packages when built with 'pip install',
+    so the import below will cause a lint warning without the "type ignore",
+    but it's fine because this file and the .so are copied into the site-packages,
+    and are the one actually used when you import smb_native; no worries!
+    """
+    from ._smb_native import * # type: ignore
 except ImportError as e:
     raise ImportError(
         "Library '_smb_native' not found.\n"
