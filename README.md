@@ -4,11 +4,11 @@ A statically recompiled [Super Mario Bros.](https://en.wikipedia.org/wiki/Super_
 
 ## How fast?
 
-<img src="benchmark/graphs/single_env_fps.svg" alt="Comparing Emulators" width="800">
+<img src="benchmark/results/single_env_fps.svg" alt="Comparing Emulators & This project" width="800">
 
 ***
 
-For common use, over 30x faster than the most common emulator used for RL, [nes-py](https://github.com/Kautenja/nes-py), often wrapped with [gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros).  
+As shown in the graph, specifically for my **Ryzen 7 5700X3D**, the recomp runs over 37.3x faster than nes-py (wrapped by [gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros)) and 12.1x faster than stable-retro.  
 This benchmark specifically play backs a [famous TAS](https://tasvideos.org/1715M) called "warps", sequentially for each emulator to compare, to reduce as much as possible variance related to code branching and randomness.  
 
 Have a look at additional [**Benchmark Results**](#benchmark-results) or see [**Limitations**](#limitations).
