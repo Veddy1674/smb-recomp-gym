@@ -1,6 +1,7 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/string_view.h>
+#include <nanobind/stl/optional.h>
 #include <nanobind/stl/tuple.h>
 #include <smb/core/env.hpp>
 #include <vector>
@@ -8,6 +9,7 @@
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <optional>
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -114,13 +116,18 @@ static void FrameInto(const SMBEnv& env, Buffer out, RenderMode mode) {
 
 // 'render' is a callable that fills a uint8_t* buffer (member RenderSprite / RenderSpriteMario)
 template <typename Render>
-static std::tuple<Frame, int, int> NewSprite(const Sprite& sprite, Render render) {
+static std::tuple<std::optional<Frame>, int, int> NewSprite(const Sprite& sprite, Render render) {
+    if (!sprite.exists())
+        return { std::nullopt, sprite.x, sprite.y };
+
     const auto shape = SpriteShape(sprite);
     
     auto* buffer = new uint8_t[shape[0] * shape[1] * 4](); // zeroed = transparent
     render(buffer);
 
-    return { Wrap(buffer, shape.size(), shape.data()), sprite.x, sprite.y };
+    return {
+        Wrap(buffer, shape.size(), shape.data()), sprite.x, sprite.y
+    };
 }
 
 // module:
@@ -217,7 +224,7 @@ NB_MODULE(_smb_native, m) {
             },
             "first_slot"_a, "count"_a,
             "Render `count` OAM sprites starting at `first_slot`. "
-            "Returns (rgba image of shape (h, w, 4), x, y). The image is empty if nothing is visible."
+            "Returns (rgba image (h, w, 4) or None if not visible, x, y). x and y are 0 when the image is None."
         )
 
         // returns (rgba image, x, y)
@@ -230,7 +237,7 @@ NB_MODULE(_smb_native, m) {
                     }
                 );
             },
-            "Render Mario's sprite. Returns (rgba image of shape (h, w, 4), x, y)."
+            "Returns rendered Mario sprite as (rgba image (h, w, 4) or None if not visible, x, y). x and y are 0 when the image is None."
         )
 
         // zero-copy view, stays valid for the env lifetime (and reset() assigns in place)
@@ -320,12 +327,13 @@ NB_MODULE(_smb_native, m) {
 
         .def("equals_any",
             [](const SMBEnv& env, nb::iterable others) {
-                for (nb::handle h : others) {
-                    if (env == nb::cast<const SMBEnv&>(h))
+                for (nb::handle item : others)
+                    if (env == nb::cast<const SMBEnv&>(item))
                         return true;
-                }
+                
                 return false;
             },
+            "others"_a,
             "True if this environment equals to any environment in `others`."
         );
 }
