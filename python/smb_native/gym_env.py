@@ -1,7 +1,7 @@
 """
 ### Gymnasium API (>=1.2.0) - Wrapper for `smb_native`.
 
-Usage:  
+#### [Usage:](https://github.com/Veddy1674/smb-recomp-gym#gymnasium-wrapper)  
 ```python
 import gymnasium as gym
 from gymnasium.error import ClosedEnvironmentError
