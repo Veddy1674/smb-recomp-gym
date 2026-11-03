@@ -15,13 +15,13 @@ env = gym.make(
     preset="W1L1", # 'ColdBoot', 'TitleScreen', 'W1L1' ... 'W8L4'
     frame_skip=4,
     action_set="simple", # 'right_only', 'simple', 'complex', list[int]
-    max_episode_steps=2000, # truncation is handled by gym's TimeLimit, infinite by default
+    max_episode_steps=800, # truncation is handled by gym's TimeLimit, infinite by default
 )
 obs, info = env.reset()
 
-terminated = False
+terminated = truncated = False
 try:
-    while not terminated:
+    while not (terminated or truncated):
         obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
 
 except ClosedEnvironmentError as e: # window closed manually
