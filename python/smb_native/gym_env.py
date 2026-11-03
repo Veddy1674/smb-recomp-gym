@@ -6,16 +6,16 @@ Usage:
 import gymnasium as gym
 from gymnasium.error import ClosedEnvironmentError
 import smb_native.gym_env as smb # registers 'SMB-v0'
-
 gym.register_envs(smb) # no-op
 
-# native grayscale and frame_skip
-env = gym.make("SMB-v0",
-    obs_type="grayscale", # will return obs with shape (240, 256), natively
-    render_mode="human", # will render RGB frames
-    preset="W1L1", # loads world 1-1
-    frame_skip=4, # native frame_skip
-    action_set="simple"
+env = gym.make(
+    "SMB-v0",
+    obs_type="rgb", # 'rgb', 'grayscale', 'indexed', 'ram'
+    render_mode="human", # None, 'rgb_array', 'human'
+    preset="W1L1", # 'ColdBoot', 'TitleScreen', 'W1L1' ... 'W8L4'
+    frame_skip=4,
+    action_set="simple", # 'right_only', 'simple', 'complex', list[int]
+    max_episode_steps=2000, # truncation is handled by gym's TimeLimit, infinite by default
 )
 obs, info = env.reset()
 
@@ -23,8 +23,10 @@ terminated = False
 try:
     while not terminated:
         obs, reward, terminated, truncated, info = env.step(env.action_space.sample())
-except ClosedEnvironmentError as e:
+
+except ClosedEnvironmentError as e: # window closed manually
     print(e)
+  
 finally:
     env.close()
 ```
