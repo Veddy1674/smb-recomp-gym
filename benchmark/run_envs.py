@@ -8,8 +8,11 @@ from typing import Callable
 
 import numpy as np
 from nes_py import NESEnv
+import nes_py.nes_env as nes_env
+from nes_py._rom import ROM
 from PIL import Image
 import stable_retro as retro
+from importlib.metadata import version
 
 from smb_native import SMBEnv
 
@@ -18,7 +21,7 @@ from smb_native import SMBEnv
 ROM_PATH = Path("assets/smb.nes")
 TAS_FM2_PATH = Path("benchmark/warpless.fm2")
 TAS_LAG_PATH = Path("benchmark/warpless_lag.txt") # for smb_native, which doesn't simulate lag frames!
-OUTPUT = Path("benchmark/") # output for logging and graphs
+OUTPUT = Path("benchmark/results") # output for logging and graphs
 
 def get_tas_actions(path: Path) -> tuple[list[int], list[int], np.ndarray]:
     with open(path, "r", encoding="utf-8") as f:
@@ -124,6 +127,7 @@ def run_tas(OUTPUT: Path, envname: str, shortname: str, runs: int, warmup: int, 
         "fps": fps,
         "cpu": cpu_name(),
         "python": platform.python_version(),
+        "libs": {lib: version(lib) for lib in ("nes_py", "stable-retro", "numpy")},
         "timestamp": datetime.now().isoformat(timespec="seconds"),
     }
 
@@ -143,6 +147,20 @@ def run_tas(OUTPUT: Path, envname: str, shortname: str, runs: int, warmup: int, 
     return result
 
 def bench_nes_py(rom_path: Path, actions: list[int]) -> tuple[float, np.ndarray, int]:
+    class DummyROM(ROM):
+        def __init__(self, rom_path):
+            super().__init__(rom_path)
+
+            # with numpy 2.x: uint8 * 1024 overflows, so a wider dtype is used:
+            self.raw_data = self.raw_data.astype(np.int64)
+
+        # nes 2.0 headers use bytes 11-15, which nes_py fail to read
+        @property
+        def _zero_fill(self):
+            return 0
+
+    nes_env.ROM = DummyROM
+    
     env = NESEnv(str(rom_path))
     env.reset()
 
@@ -152,6 +170,8 @@ def bench_nes_py(rom_path: Path, actions: list[int]) -> tuple[float, np.ndarray,
     s = None
     for action in actions:
         s = env.step(action)[0]
+
+    env.step(0) # for unknown reasons, nes_py is 1 frame behind stable-retro and the recomp, this fixes it
 
     t = perf_counter() - t
     assert s is not None
@@ -173,8 +193,7 @@ def bench_smb_native(actions: list[int], lag_frames: set[int]) -> tuple[float, n
         if i in lag_frames:
             continue
         
-        env.set_input(action)
-        env.step()
+        env.step(action)
 
         s = env.get_frame(render_mode="rgb")
 
@@ -184,16 +203,13 @@ def bench_smb_native(actions: list[int], lag_frames: set[int]) -> tuple[float, n
     return t, s, len(actions)
 
 def bench_stable_retro(actions: np.ndarray) -> tuple[float, np.ndarray, int]:
-    try:
-        env = retro.make(
-            game="SuperMarioBros-Nes-v0",
-            state=retro.State.NONE,
-            render_mode="rgb_array",
-            use_restricted_actions=retro.Actions.ALL
-        )
-    except FileNotFoundError:
-        raise ValueError("'SuperMarioBros-Nes-v0' not found, try running: python -m stable_retro.import {FOLDER WHERE YOUR ROM IS, e.g: 'assets/'}")
-
+    env = retro.make(
+        game="SuperMarioBros-Nes-v0",
+        state=retro.State.NONE,
+        render_mode="rgb_array",
+        use_restricted_actions=retro.Actions.ALL
+    )
+    
     env.reset()
 
     t = perf_counter()
@@ -219,6 +235,13 @@ if __name__ == "__main__":
 
     RUNS = 5
     WARMUP = 1
+
+    # quick test for stable-retro, as it is executed last, if it fails
+    # to run all the time is wasted and results.jsonl will be partially filled
+    try:
+        retro.make("SuperMarioBros-Nes-v0")
+    except FileNotFoundError:
+        raise ValueError("'SuperMarioBros-Nes-v0' not found, try running: python -m stable_retro.import {FOLDER WHERE YOUR ROM IS, e.g: 'assets/'}")
 
     print(f"Running each env {RUNS} times ({WARMUP} warmup)")
 

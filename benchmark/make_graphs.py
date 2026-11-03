@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # change this path according to your setup
-OUTPUT = Path("benchmark/graphs/")
-RESULTS = Path("benchmark/results.jsonl")
+OUTPUT = Path("benchmark/results/")
+RESULTS = OUTPUT / "results.jsonl"
 
 LABELS = {
     "nes_py": "nes-py\ngym-super-mario-bros",
@@ -44,7 +44,7 @@ def __make_single_env_fps_graph(results: dict):
     r0 = rows[0]
     fig.text(
         x = -.05, y = -.1,
-        s = f"{r0['cpu']} | 1 Instance | RGB Rendering",
+        s = f"{r0['cpu']} | RGB Rendering",
         fontsize=8, color="#ADADAD",
     )
 
