@@ -11,15 +11,121 @@ A statically recompiled [Super Mario Bros.](https://en.wikipedia.org/wiki/Super_
 For common use, over 30x faster than the most common emulator used for RL, [nes-py](https://github.com/Kautenja/nes-py), often wrapped with [gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros).  
 This benchmark specifically playbacks a [famous TAS](https://tasvideos.org/1715M) called "warps", sequentially for each emulator to compare, to reduce as much as possible variance related to code branching and randomness.  
 
-Have a look at additional [**Benchmark Results**](#benchmark-results) or [**Get Started**](#getting-started).
+Have a look at additional [**Benchmark Results**](#benchmark-results) or see [**Limitations**](#limitations).
+
+## Getting Started
+> [!NOTE]
+> There is no PyPI package or prebuilt wheel, the build needs **your own ROM** (see [Legal Note](#legal-note--license)), everything is compiled locally.  
+> `-march=native` is used by default for building, so don't copy the compiled library/wheel to another machine, rebuild it there.
+
+This repo builds a **Python package** `smb_native` (includes the Gymnasium wrapper), which is what you want in most cases, and optionally a **C++ shared library** which is arguably more performant and can be used for RL via LibTorch and such.
+
+### Requirements
+- Python 3.10+ (virtual env is recommended)
+- CMake 3.18+
+- A C++20 compiler (GCC or Clang) <!-- TODO: min versions? -->
+- OpenMP (optional, used automatically if found)
+- Your own Super Mario Bros. ROM
+
+The SHA-1 of the ROM without iNES header must be exactly `facee9c577a5262dbe33ac4930bb0b58c8c037f7`, if you are unsure, just proceed with the build, it will fail if the ROM is invalid.
+
+This guide was built for Linux users (tested on Linux Mint), on Windows you can use WSL, on MacOS you can use Clang and follow the same steps, but both are untested, feel free to [open an issue](#contributing) if you encounter any problems.
+
+### Setup
+
+1\. Clone the repository, create a Python environment and activate it:  
+```bash
+git clone https://github.com/Veddy1674/smb-recomp-gym
+cd smb-recomp-gym
+python3 -m venv .venv && source .venv/bin/activate
+```
+<sup>If you're unable to create the virtual environment: `sudo apt install python3-venv`</sup>
+
+2\. Manually put your ROM in the `assets` directory and make sure it's named exactly `smb.nes`!  
+<!-- TODO: allow rom with any name -->
+
+#### Now pick whether you want to [use the libraries](#install) or [edit the source](#for-developers).
+
+***
+### Install
+
+Return to terminal, build and install the python library:  
+```bash
+pip install .
+```
+
+That's it, the ROM is only read once at build time (by [`dump_rom.py`](assets/dump_rom.py)) to generate `game_data.hpp`.  
+The first build takes a while due to -O3 & -flto flags.
+
+If you get errors regarding "Invalid ROM", try a different ROM and make sure it's named exactly `smb.nes` and is inside the `assets` folder, next to `dump_rom.py` itself!
+<!-- TODO: allow rom with any name -->
+
+Quick test to see if the library is working:
+```bash
+python -c "import smb_native"
+```
+Make sure you are running this in the virtual environment, not the system Python or any other.
+
+### C++ Library <small>(optional)</small>
+
+If you want to use the C++ shared library instead, it can be built without or together the Python bindings:
+```bash
+cmake -B build -DBUILD_CPP_LIBRARY=ON
+cmake --build build -j
+sudo cmake --install build
+```
+**For Linux users only**, update the shared library cache:  
+```bash
+sudo ldconfig
+```
+This installs the shared library and headers to `/usr/local` by default, use `-DCMAKE_INSTALL_PREFIX=...` to change it.  
+(Python 3.10+ is still required here to run [`dump_rom.py`](assets/dump_rom.py)!).
+
+To use the shared library in a project, from CMake:
+```cmake
+find_package(smb_native REQUIRED)
+target_link_libraries(app PRIVATE smb_native::smb_native)
+```
+Or link manually with `-lsmb_native` flag.
+
+#### See [**Build Options**](#usage) or [**Usage**](#usage) to begin.
+
+***
+### For Developers
+
+Editable install, **without** build isolation so the build directory (`build/skbuild`) stays stable and rebuilds are incremental:
+```bash
+pip install --group dev
+pip install -e . --no-build-isolation
+```
+**NOTE:** `--group` requires pip 25.1+, run `pip install -U pip` first to upgrade, or just `pip install scikit-build-core nanobind`.
+
+Editing Python files in `python/smb_native/` takes effect immediately.  
+On the other side, **after touching any C++ file you have to rebuild**:
+```bash
+pip install -e . --no-build-isolation -v
+```
+
+### Build Options
+| Option | Default | What it does |
+|---|---|---|
+| `BUILD_PYTHON_BINDINGS` | `OFF` (`ON` via pip) | builds the Python bindings (nanobind) |
+| `BUILD_CPP_LIBRARY` | `ON` (`OFF` via pip) | builds and installs the shared C++ library |
+| `REMOVE_RESIDUAL` | `ON` | removes unused/unreachable code (~1-2% faster) |
+
+You can apply the build options from CMake:  
+`-DREMOVE_RESIDUAL=OFF`  
+Or from pip:  
+`-C cmake.define.REMOVE_RESIDUAL=OFF`.  
+
+## Usage
+TODO
 
 ## Benchmark Results
 
 Every time I mention "the TAS" in this README, I am strictly referring to that ["warps" TAS](https://tasvideos.org/1715M) cited at the beginning.
 
-... TODO ...
-
-You can run the same benchmark shown [here](#how-fast) yourself (make sure you followed all the steps [here](#getting-started) first!):  
+First of all, you can run the same benchmark shown [here](#how-fast) yourself (make sure you followed all the steps [here](#getting-started) first!):  
 ```bash
 pip install -r benchmark/requirements.txt
 python benchmark/run_envs.py
@@ -67,9 +173,6 @@ python benchmark/ram_compare.py
 ```
 [`ram_compare.py`](benchmark/ram_compare.py) runs the TAS for stable-retro and the recomp, stores every RAM array each frame and compares them (excluding during lag frames), then prints info regarding RAM matching in percentage.
 
-## Getting Started
-TODO
-
 ## Limitations
 
 Here's a list of all the limitations this recompilation has compared to traditional emulators, and the reasons why the RAM mismatches occur and what "not cycle-accurate" means:
@@ -84,21 +187,35 @@ Here's a list of all the limitations this recompilation has compared to traditio
 For most use cases, this recompilation works just as fine as any other emulator, it can be used for reinforcement learning, optimizing TASes (for example through input brute-forcing) or even to play through the game normally.  
 (Little side note, if it's used for a TAS meant to play on real hardware, lag frames have to be added artificially)
 
+## Contributing
+Contributions are very appreciated, whether it's a bug report, feature request, or even correcting a typo.
+
+- **Bugs:** open an issue with steps to reproduce the bug (inputs/seed if possible).  
+Differences NOT mentioned in the [Limitations](#limitations) section are very appreciated, along with game glitches, desyncs, UB, etc.
+
+- **Pull requests:** keep them focused and explain what changed and why. If you touch `game.cpp`, (e.g. to optimize a label, even if it drifts from the disassembly it's okay) you need to demonstrate with tests it didn't break anything [regarding accuracy and determinism](#proving-accuracy-and-determinism) and/or benchmark the before and after (you can use [my benchmarks](#benchmark-results)).
+
+- **AI-assisted code** is fine, as long as you are able to explain every change and its consequence.
+
+- **Never** attach ROMs or copyrighted assets to issues/PRs, and please don't ask for a prebuilt wheel with an embedded ROM, it won't happen (see [Legal Note](#legal-note--license) below).
+
 ## Legal Note & License
 
-- No ROM, graphics, audio or other game assets are distributed in this repository, not via source code nor via wheel distribution.
-- The [recompiled source](src/core/environment.cpp) is a translation of the game’s logic from Assembly 6502 to C++, derived from a [community disassembly](https://gist.github.com/1wErt3r/4048722) of the original ROM.
-- **Your own legally obtained ROM** is always required for compilation.
-- This project is not affiliated with or endorsed by Nintendo.
+- No ROM, graphics, audio or other game assets are distributed in this repository.  
+- The [recompiled source](src/core/game.cpp) is a translation of the game’s logic from 6502 Assembly to C++, derived from a [community disassembly](https://gist.github.com/1wErt3r/4048722) made by reverse-engineering the original ROM. The game logic itself remains **Nintendo's intellectual property**, this repo only contains my translation of it.  
+- **Your own legally obtained ROM** is always required for compilation.  
+- This project is not affiliated with or endorsed by Nintendo, and exists for research and educational purposes.
 
-The license for this project is [MIT](LICENSE) and is exclusively applied to the source code of this repository. It does not cover any Nintendo property or the `warpless.fm2` distributed file, (information about the license can be found in the [TASVideos website](https://tasvideos.org/SiteLicense)).
+The [MIT](LICENSE) license applies only to: the tooling, bindings, wrappers, benchmarks and my own work on the recompilation.  
+It grants nothing over Nintendo's property, nor the `warpless.fm2` file (see the [TASVideos license](https://tasvideos.org/SiteLicense)).
 
 ## Acknowledgements
 
-- Special thanks to doppelganger and the other creators of the [disassembly](https://gist.github.com/1wErt3r/4048722) of the game, which was used as a reference for the recompilation, specifically [here](src/core/environment.cpp).
+- Special thanks to doppelganger and the other creators of the [disassembly](https://gist.github.com/1wErt3r/4048722) of the game, which was used as a reference for the recompilation, specifically [here](src/core/game.cpp).
 - Thanks to [NESDev](https://www.nesdev.org) Community for their very helpful [documentation](https://www.nesdev.org/wiki/Instruction_reference) regarding the CPU 6502 instruction set.
 - Thanks to [TASVideos](https://tasvideos.org) Community for their excellent TAS videos which helped with benchmarking and proving accuracy and determinism.
 - Thanks to **Christian Kauten** and the developers behind [gym-super-mario-bros](https://github.com/Kautenja/gym-super-mario-bros) and [nes-py](https://github.com/Kautenja/nes-py) for establishing the standard reinforcement learning API baseline for this game.
+- Thanks to **Farama Foundation** and its developers behind [stable-retro](https://github.com/Farama-Foundation/stable-retro) which helped with comparing benchmarks & [proving accuracy](#proving-accuracy-and-determinism).
 - And of course, thanks to **Nintendo** for creating the game and revolutionizing the gaming industry, which happened to give RL a very useful environment still in use today for testing and benchmarking models.
 
 ## Citation
