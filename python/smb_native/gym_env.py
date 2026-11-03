@@ -44,7 +44,7 @@ from . import Input, SMBEnv
 ObsKind = Literal["rgb", "grayscale", "indexed", "ram"]
 OBS_TYPES = get_args(ObsKind)
 
-ACTION_SETS: dict[str, list[Input]] = {
+ACTION_SETS: dict[str, list[int]] = {
     "right_only": [
         Input.RIGHT,
         Input.RIGHT | Input.A,
@@ -98,7 +98,7 @@ class SMBGymEnv(gym.Env[np.ndarray, np.int64]):
     def __init__(
             self,
             obs_type: ObsKind = "rgb",
-            action_set: str | Sequence[Input] = "simple",
+            action_set: str | Sequence[int] = "simple",
             preset: str = "W1L1",
             frame_skip: int = 1,
             render_mode: str | None = None,
@@ -141,7 +141,7 @@ class SMBGymEnv(gym.Env[np.ndarray, np.int64]):
         return self._env.ram # view, not a copy!
 
     @staticmethod
-    def _resolve_actions(action_set: str | Sequence[Input]) -> list[int]:
+    def _resolve_actions(action_set: str | Sequence[int]) -> list[int]:
         if isinstance(action_set, str):
             if action_set not in ACTION_SETS:
                 raise ValueError(
