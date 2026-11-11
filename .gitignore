@@ -22,6 +22,7 @@ __pycache__/
 
 perf.data
 perf.data.old
+compile_commands.json
 
 # must be excluded to avoid legal issues:
 game_data.hpp
