@@ -93,7 +93,7 @@ static std::vector<size_t> SpriteShape(const Sprite& s) {
 static void CheckShape(const Buffer& buf, const std::vector<size_t>& expected, const char* what) {
     bool ok = buf.ndim() == expected.size();
 
-    for (size_t i = 0; ok && i < expected.size(); ++i)
+    for (size_t i = 0; ok && i < expected.size(); i++)
         ok = buf.shape(i) == expected[i];
 
     if (!ok)

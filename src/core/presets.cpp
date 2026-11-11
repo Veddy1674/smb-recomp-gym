@@ -38,7 +38,7 @@ const std::array<SMBEnv, SMBEnv::PresetsCount>& SMBEnv::ResetPresets() noexcept 
         
         // levels: start from title screen as early as possible and step
         // until the level starts fully (like gym-super-mario-bros does)
-        for (uint8_t i = 2; i < 34; ++i) { // iterate through the 32 levels
+        for (uint8_t i = 2; i < 34; i++) { // iterate through the 32 levels
             auto& level = p[i];
             level = titleScreen.Copy();
             

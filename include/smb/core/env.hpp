@@ -191,7 +191,7 @@ private:
     int ReadRangeRAM(uint16_t startAddress, uint16_t length) const {
         int value = 0;
         
-        for (uint16_t i = 0; i < length; ++i) {
+        for (uint16_t i = 0; i < length; i++) {
             value = (value * 10) + ram[startAddress + i];
         }
         
