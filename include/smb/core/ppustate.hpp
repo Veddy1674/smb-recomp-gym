@@ -6,7 +6,7 @@
 // one used for rendering (written to in the step before the rendering)
 // and one used for necessary write/reads such as the flags, sprite0hit and such
 // this would grant higher performance on headless execution but introduce boilerplate
-struct PPUState {
+struct alignas(8) PPUState {
     uint8_t ctrl = 0; // 0x2000
     uint8_t mask = 0; // 0x2001
     uint8_t oamaddr = 0; // 0x2003
