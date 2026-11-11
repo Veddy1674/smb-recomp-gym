@@ -57,8 +57,7 @@ def run_smb_native(actions: list[int], lag_frames: set[int]) -> tuple[float, np.
             all_ram.append(env.ram.copy())
             continue
         
-        env.set_input(action)
-        env.step()
+        env.step(action)
 
         all_ram.append(env.ram.copy())
 
