@@ -141,6 +141,39 @@ void BindSMBEnvVec(nb::module_& m) {
             "Same as at(), supports negative indices and iteration."
         )
 
+        // overload for slicing to work
+        .def("__getitem__",
+            [](SMBEnvVec& vec, const nb::slice& slice) {
+                // compute() resolves None/negative/out-of-range...
+                auto [start, stop, step, slice_length] = slice.compute(vec.Size());
+
+                std::vector<SMBEnv*> selected;
+                selected.reserve(slice_length);
+
+                for (size_t i = 0; i < slice_length; ++i) {
+                    selected.push_back(
+                        &vec.At(static_cast<size_t>(start))
+                    );
+                    start += step;
+                }
+                return selected;
+            },
+            nb::rv_policy::reference_internal,
+            "Native Python array slicing."
+        )
+
+        // to avoid pyright warnings when using enumerate(envs)
+        .def("__iter__",
+            [](SMBEnvVec& vec) {
+                // the iterator type is registered once
+                return nb::make_iterator(
+                    nb::type<SMBEnvVec>(), "SMBEnvVecIterator",
+                    vec.begin(), vec.end()
+                );
+            },
+            nb::keep_alive<0, 1>()
+        )
+
         .def("reset_all",
             [](SMBEnvVec& vec, std::string_view preset) {
                 const ResetPreset parsed = ParsePreset(preset); // throws before releasing the GIL
