@@ -30,6 +30,15 @@ struct SMBEnvVec {
         return envs[index];
     }
 
+    // for nanobind, as .envs is private
+    auto begin() {
+        return envs.begin();
+    }
+
+    auto end() {
+        return envs.end();
+    }
+
     // defined in env_vec.cpp, so the openmp flags apply even to code including this header
     static bool UsesOpenMP() noexcept;
     static int MaxThreads() noexcept; // 1 if no openmp
