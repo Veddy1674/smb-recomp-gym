@@ -24,7 +24,7 @@ This repo builds a **Python package** `smb_native` (includes the Gymnasium wrapp
 - Python 3.10+ (virtual env is recommended)
 - CMake 3.18+
 - A C++20 compiler (GCC or Clang) <!-- TODO: min versions? -->
-- OpenMP (optional and unused, meant for future vectorization api) <!--TODO: optional, automatically used if found for vectorization api) -->
+- OpenMP (optional, automatically used if found for [vectorization api](#native-vectorization))
 - Your own Super Mario Bros. ROM
 
 The SHA-1 of the ROM without iNES header must be exactly `facee9c577a5262dbe33ac4930bb0b58c8c037f7`, if you are unsure, just proceed with the build, it will fail if the ROM is invalid.
@@ -232,13 +232,17 @@ print(native.get_coins())
 Or use `.unwrapped` but gym.make returns wrapped envs typed as `gym.Env`, so IDEs can't autocomplete `native` / `ram`.
 
 > [!WARNING]
-> **Vectorization is WIP.** For now you can use Gymnasium's own
-> `gym.make_vec`. A native C++ `SMBEnvVec` is planned.
+> **Vectorization is WIP.**  
+> [`SMBEnvVec` was just implemented](#native-vectorization), but not the relative Gymnasium wrapper for it.  
+> For now you can use Gymnasium's own `gym.make_vec`.
 
-***
+<!-- ### Gymnasium Vectorization
+
+*** -->
 
 ### Python low-level API
 The [Gymnasium Wrapper](#gymnasium-wrapper) is built on top of this.
+
 ```python
 import numpy as np
 from smb_native import SMBEnv, Input
@@ -311,10 +315,68 @@ The environment's state is the RAM itself, it can be copied with **`copy()`** (w
 The environment's state can be hashed shallowly with `hash(env)`, so a `set` of environments can be made (for example in a search algorithm to avoid duplicates), but upon collision the two states should be compared with `.equals()` or `==` which natively compares via `std::memcmp`, to avoid false positives.  
 Hashing only applies to RAM, not PPUState.
 
+#### Native Vectorization
+
+`SMBEnvVec` features native C++ vectorization using OpenMP, if the project [was built without it](#requirements), it will function single-threadedly.  
+The syntax is very close to the `SMBEnv` class, similar methods end with suffix "_all".
+
+```python
+from smb_native import SMBEnvVec, Input
+import numpy as np
+
+envs = SMBEnvVec(n_envs=64) # create 64 instances at once
+envs.reset_all(preset="W1L1") # uses multi-threading
+
+action_space = [
+    Input.RIGHT,
+    Input.LEFT
+]
+
+# array of n_envs actions randomly chosen from action_space
+actions = np.random.choice(action_space, size=envs.n_envs)
+
+# pre-allocated buffer (optional)
+frames = np.empty((envs.n_envs, 240, 256, 3), dtype=np.uint8)
+
+# step all 64 environments at once, each with its own action, frameskip 4
+envs.step_all(actions, times=4) # uses multi-threading
+
+# get 64 240x256 RGB uint8 frames at once
+envs.get_frame_all(frames, render_mode="rgb") # uses multi-threading
+
+envs.at(0).reset(preset="ColdBoot") # reset one single environment
+
+# direct indexing and slicing works as well
+for env in envs[1:3]:
+    env.reset(preset="ColdBoot")
+
+# access RAM and get/set values, multiple instances at once
+envs.ram_all[:, 0xce] = 20 # (this changes mario absolute Y position)
+
+# get env idx with highest abs_x
+all_x = envs.get_abs_x_all()
+idx = np.argmax(all_x)
+
+print(f"Env {idx + 1}/{envs.n_envs} has abs X = {all_x[idx]}")
+
+ram_copy = envs.get_ram_all() # copy of envs.ram_all, contiguous (n_envs, 2048) uint8
+
+# iterate through every environment (type Iterable[SMBEnv])
+for i, env in enumerate(envs, start=1):
+    if i % 8 == 0:
+        print(f"Env {i} has abs Y = {env.get_abs_y()}")
+```
+
+**Notes:**  
+\- **`.reset_all(...)`**, **`.step_all(...)`**, **`.get_frame_all(...)`** use multi-threading, utilities that access RAM, such as **`.get_abs_x_all()`** are serial on purpose, as array accessing is usually faster this way.  
+\- Every environment can be individually accessed via `direct indexing`, `slicing`, or with **`at(index: int)`**; `SMBEnvVecIterator` iterates through all the environments.  
+\- **`.n_envs`** read-only property is the amount of environments the class is managing, initialized in the constructor; Equivalent to `len()`.  
+\- **`.num_threads()`** returns the amount of threads used for multi-threading, by default it's the amount of virtual processors your main CPU has, if you built without OpenMP, it returns 1.
+
 ***
 
 ### C++ shared library
-All the documentation here is equivalent to [Python low-level API](#python-low-level-api) (except methods use PascalCase instead of snake_case), so have a look there.  
+All the documentation here is equivalent to [Python low-level API](#python-low-level-api) (except methods use PascalCase instead of snake_case), including vectorization, so have a look there.  
 Using the C++ library is usually preferred for better raw performance over the Python API or the [Gymnasium Wrapper](#gymnasium-wrapper).
 ```cpp
 #include <smb/core/env.hpp>
