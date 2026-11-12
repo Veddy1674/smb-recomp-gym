@@ -13,6 +13,9 @@
 #include <nanobind/stl/optional.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
+#include <nanobind/stl/vector.h>
+
+#include <nanobind/make_iterator.h>
 
 namespace nb = nanobind;
 using namespace nb::literals; // for '_a' args
