@@ -173,8 +173,10 @@ if(BUILD_PYTHON_BINDINGS)
 
     find_package(nanobind CONFIG REQUIRED)
 
+    file(GLOB_RECURSE BINDING_SOURCES CONFIGURE_DEPENDS "src/bindings/*.cpp")
+
     nanobind_add_module(_smb_native NB_STATIC NOMINSIZE
-        src/bindings/python_bindings.cpp
+        ${BINDING_SOURCES}
         $<TARGET_OBJECTS:smb_core>
     )
 
