@@ -10,10 +10,12 @@
 
 // these are required to avoid issues in the .pyi file
 #include <nanobind/stl/string_view.h>
+#include <nanobind/stl/optional.h>
+#include <nanobind/stl/string.h>
 #include <nanobind/stl/tuple.h>
 
 namespace nb = nanobind;
-using namespace nb::literals;
+using namespace nb::literals; // for '_a' args
 
 // each file binds its own part, called in this order from NB_MODULE
 // (SMBEnv must be bound before SMBEnvVec, as the signatures refer to it)
@@ -60,11 +62,11 @@ static E ParseName(const NameTable<E>& table, std::string_view name, const char*
     throw nb::value_error(("invalid " + std::string(what) + ": '" + std::string(name) + "'").c_str());
 }
 
-static ResetPreset ParsePreset(std::string_view name) {
+inline ResetPreset ParsePreset(std::string_view name) {
     return ParseName(kPresets, name, "preset");
 }
 
-static RenderMode ParseRenderMode(std::string_view name) {
+inline RenderMode ParseRenderMode(std::string_view name) {
     return ParseName(kRenderModes, name, "render_mode");
 }
 
@@ -83,7 +85,7 @@ static nb::ndarray<nb::numpy, T> Wrap(T* data, size_t ndim, const size_t* shape)
 }
 
 // shape as a vector
-static std::vector<size_t> FrameShape(RenderMode mode) {
+inline std::vector<size_t> FrameShape(RenderMode mode) {
     if (mode == RenderMode::RGB)
         return {SCREEN_HEIGHT, SCREEN_WIDTH, 3};
 
@@ -91,7 +93,7 @@ static std::vector<size_t> FrameShape(RenderMode mode) {
 }
 
 // assert for buffer arg that python gives in rendering functions
-static void CheckShape(const Buffer& buf, const std::vector<size_t>& expected, const char* what) {
+inline void CheckShape(const Buffer& buf, const std::vector<size_t>& expected, const char* what) {
     bool ok = buf.ndim() == expected.size();
 
     for (size_t i = 0; ok && i < expected.size(); i++)
