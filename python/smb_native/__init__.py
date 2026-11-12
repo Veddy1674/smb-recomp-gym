@@ -23,4 +23,4 @@ except ImportError as e:
         "Please follow the instructions in the README.md to install it."
     ) from e
 
-__all__ = ["SMBEnv", "Input"]
+__all__ = ["SMBEnv", "SMBEnvVec", "Input"]
