@@ -186,6 +186,7 @@ void BindSMBEnv(nb::module_& m) {
         .def("__copy__", &SMBEnv::Copy,
             "Return an independent copy of this environment."
         )
+
         .def("equals",
             [](const SMBEnv& a, const SMBEnv& b) {
                 return a == b; // memcmp on ram
@@ -197,6 +198,7 @@ void BindSMBEnv(nb::module_& m) {
                 return a == b; // memcmp on ram
             },
             nb::is_operator(),
+            nb::sig("def __eq__(self, arg: object, /) -> bool"),
             "True if the RAM of both environments is identical."
         )
 

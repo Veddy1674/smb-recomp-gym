@@ -272,6 +272,7 @@ void BindSMBEnvVec(nb::module_& m) {
         .def("__copy__", &SMBEnvVec::Copy,
             "Return an independent copy of this vector and all its environments."
         )
+
         .def("equals",
             [](const SMBEnvVec& a, const SMBEnvVec& b) {
                 return a == b; // memcmp on ram, env by env
@@ -283,6 +284,7 @@ void BindSMBEnvVec(nb::module_& m) {
                 return a == b;
             },
             nb::is_operator(),
+            nb::sig("def __eq__(self, arg: object, /) -> bool"),
             "True if the RAM of every environment matches the other vector's, in order."
         );
 }
