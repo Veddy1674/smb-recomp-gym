@@ -162,6 +162,20 @@ void BindSMBEnvVec(nb::module_& m) {
             "Native Python array slicing."
         )
 
+        .def("__setitem__",
+            [](SMBEnvVec& vec, int64_t index, const SMBEnv& env) {
+                if (index < 0)
+                    index += static_cast<int64_t>(vec.Size()); // python-like negative index
+
+                if (index < 0)
+                    throw std::out_of_range("env index out of range");
+
+                vec.SetStateOf(static_cast<size_t>(index), env);
+            },
+            "index"_a, "env"_a,
+            "Copy the full state of `env` into env `index`, in place. Supports negative indices."
+        )
+
         // to avoid pyright warnings when using enumerate(envs)
         .def("__iter__",
             [](SMBEnvVec& vec) {
@@ -319,5 +333,14 @@ void BindSMBEnvVec(nb::module_& m) {
             nb::is_operator(),
             nb::sig("def __eq__(self, arg: object, /) -> bool"),
             "True if the RAM of every environment matches the other vector's, in order."
+        )
+
+        .def("set_state_of",
+            [](SMBEnvVec& vec, size_t index, const SMBEnv& env) {
+                vec.SetStateOf(index, env);
+            },
+            "index"_a, "env"_a,
+            "Copy the full state of `env` into env `index`, in place. "
+            "Raises IndexError if the index is out of range."
         );
 }
