@@ -30,6 +30,12 @@ struct SMBEnvVec {
         return envs[index];
     }
 
+    // this is meant for python, but is here because its use is a little more clear
+    // than doing envs.At(i) = env or such, so it might be useful for C++ API too
+    void SetStateOf(size_t index, const SMBEnv& env) {
+        At(index) = env;
+    }
+
     // for nanobind, as .envs is private
     auto begin() {
         return envs.begin();
@@ -42,10 +48,6 @@ struct SMBEnvVec {
     // defined in env_vec.cpp, so the openmp flags apply even to code including this header
     static bool UsesOpenMP() noexcept;
     static int MaxThreads() noexcept; // 1 if no openmp
-
-    void Reset(size_t index, ResetPreset preset = ResetPreset::TitleScreen) {
-        At(index).Reset(preset);
-    }
 
     // parallel
     void ResetAll(ResetPreset preset = ResetPreset::TitleScreen) noexcept;
