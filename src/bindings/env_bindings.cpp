@@ -223,5 +223,15 @@ void BindSMBEnv(nb::module_& m) {
             },
             "others"_a,
             "True if this environment equals to any environment in `others`."
+        )
+
+        // this is more of a readable alternative to env = other.copy(), which works fine
+        .def("set_state_from",
+            [](SMBEnv& env, const SMBEnv& other) {
+                env = other;
+            },
+            "other"_a,
+            "Copy the full state of `other` into this env, in place. "
+            "Equivalent to `env = other.copy()`."
         );
 }
