@@ -125,6 +125,7 @@ class SMBGymEnv(gym.Env[np.ndarray, np.int64]):
 
         self._env = SMBEnv()
         self._env.reset(self.preset)
+        self._prev_env = SMBEnv()
 
         self._actions = self._resolve_actions(action_set)
 
@@ -275,8 +276,7 @@ class SMBGymEnv(gym.Env[np.ndarray, np.int64]):
     def step(self, action: np.int64) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         action_bits = self._actions[int(action)]
 
-        # TODO new binding to memcpy into a preallocated env state
-        prev_state = self._env.copy()
+        self._prev_env.set_state_from(self._env)
 
         if self.render_mode == "human":
             for _ in range(self.frame_skip): # one frame at a time so it looks smooth
@@ -287,8 +287,8 @@ class SMBGymEnv(gym.Env[np.ndarray, np.int64]):
 
         terminated = self._env.get_terminated() # win or death
 
-        # self._env is passed without copy but it should not be modified, as it would affect the actual env
-        reward = self.reward_function(prev_state, self._env)
+        # prev_state and curr_state are passed without copy, treat them as read-only
+        reward = self.reward_function(self._prev_env, self._env)
 
         # truncated is forced False, TimeLimit wrapper handles that
         return self._get_obs(), reward, terminated, False, self._get_info()
