@@ -403,10 +403,10 @@ pip install -r benchmark/requirements.txt
 python benchmark/run_envs.py
 python benchmark/make_graphs.py
 ```
-[`run_envs.py`](benchmark/run_envs.py) runs the TAS on different emulators and this recomp, sequentially, multiple times and with warmups, then outputs the results to `benchmark/results.jsonl`.  
-[`make_graphs.py`](benchmark/make_graphs.py) then processes the results and generates a graph in `benchmark/graphs/`.  
+[`run_envs.py`](benchmark/run_envs.py) runs the TAS on different emulators and this recomp, sequentially, multiple times and with warmups, then outputs the results to `benchmark/results/results.jsonl`.  
+[`make_graphs.py`](benchmark/make_graphs.py) then processes the results and generates a graph in `benchmark/results/`.  
 
-My own results were left over as `benchmark/readme_results.jsonl` to prove the graph's source.  
+My own results were left over as [`benchmark/results/readme_results.jsonl`](benchmark/results/readme_results.jsonl) to prove the graph's source.  
 `warpless.fm2` and `warpless_lag.txt` were left over for you to quickly run the TAS yourself and see what the .txt should look like where lag frames are noted.
 
 ### Proving Accuracy and Determinism
