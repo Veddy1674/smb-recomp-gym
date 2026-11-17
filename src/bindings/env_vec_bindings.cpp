@@ -93,7 +93,7 @@ void BindSMBEnvVec(nb::module_& m) {
 
                 if (!SMBEnvVec::UsesOpenMP()) {
                     nb::module_::import_("warnings").attr("warn")(
-                        "smb_native was built without OpenMP, SMBEnvVec will run single-threaded. "
+                        "smb_native was built without OpenMP, SMBEnvVec will run single-threaded. \n"
                         "Install OpenMP and rebuild for native multi-threading.",
                         nb::handle(PyExc_RuntimeWarning)
                     );
@@ -203,8 +203,8 @@ void BindSMBEnvVec(nb::module_& m) {
             },
             "preset"_a = "TitleScreen",
             nb::sig("def reset_all(self, preset: str = 'TitleScreen') -> None"),
-            "Reset every environment to a preset state: 'ColdBoot', 'TitleScreen' or 'W1L1' ... 'W8L4'. "
-            "Raises ValueError if the state is invalid."
+            "Reset every environment to `preset` state: 'ColdBoot', 'TitleScreen' or 'W1L1' ... 'W8L4'.\n\n"
+            "Raises:\n    ValueError: If `preset` is invalid."
         )
 
         .def("step_all",
@@ -346,8 +346,8 @@ void BindSMBEnvVec(nb::module_& m) {
                 vec.SetStateOf(index, env);
             },
             "index"_a, "env"_a,
-            "Copy the full state of `env` into env `index`, in place. "
-            "Raises IndexError if the index is out of range."
+            "Copy the full state of `env` into env `index`, in place.\n\n"
+            "Raises:\n    IndexError: If `index` is out of range."
         )
 
         // sequential raw bytes of all envs, no headers

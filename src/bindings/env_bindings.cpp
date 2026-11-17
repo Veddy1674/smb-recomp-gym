@@ -66,8 +66,8 @@ void BindSMBEnv(nb::module_& m) {
             },
             "preset"_a = "TitleScreen",
             nb::sig("def reset(self, preset: str = 'TitleScreen') -> None"),
-            "Reset to a preset state: 'ColdBoot', 'TitleScreen' or 'W1L1' ... 'W8L4'. "
-            "Raises ValueError if the state is invalid."
+            "Reset to `preset` state: 'ColdBoot', 'TitleScreen' or 'W1L1' ... 'W8L4'.\n\n"
+            "Raises:\n    ValueError: If `preset` is invalid."
         )
 
         // action is held for `times` frames
@@ -113,8 +113,9 @@ void BindSMBEnv(nb::module_& m) {
                 );
             },
             "first_slot"_a, "count"_a,
-            "Render `count` OAM sprites starting at `first_slot`. "
-            "Returns (rgba image (h, w, 4) or None if not visible, x, y). x and y are 0 when the image is None."
+            "Render `count` OAM sprites starting at `first_slot`.\n\n"
+            "Returns:\n    tuple: `(rgba_image x, y)` where `rgba_image` has shape `(h, w, 4)` "
+            "or `None` if not visible (`x` and `y` are `0` when `None`)."
         )
 
         // returns (rgba image, x, y)
@@ -235,7 +236,7 @@ void BindSMBEnv(nb::module_& m) {
                 env = other;
             },
             "other"_a,
-            "Copy the full state of `other` into this env, in place. "
+            "Copy the full state of `other` into this env, in place.\n\n"
             "Equivalent to `env = other.copy()`."
         )
 
