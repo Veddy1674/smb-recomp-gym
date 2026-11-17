@@ -44,16 +44,20 @@ static std::tuple<std::optional<Frame>, int, int> NewSprite(const Sprite& sprite
 void BindSMBEnv(nb::module_& m) {
     // define class
     nb::class_<SMBEnv> cls(m, "SMBEnv",
-        "Super Mario Bros. Environment (Low Level API).\n\n"
-        "Class attributes:\n"
-        "    SIZE_BYTES: sizeof the underlying C++ struct, in bytes.");
-
-    cls.attr("SIZE_BYTES") = sizeof(SMBEnv);
+        "Super Mario Bros. Environment (Low Level API)."
+    );
 
     // methods:
     cls
         .def(nb::init<>(),
             "Create a new environment."
+        )
+
+        .def_prop_ro_static("SIZE_BYTES",
+            [](nb::handle) {
+                return sizeof(SMBEnv);
+            },
+            "Size in bytes of a single environment's raw state (RAM + PPUState)."
         )
 
         .def("reset",
@@ -233,5 +237,48 @@ void BindSMBEnv(nb::module_& m) {
             "other"_a,
             "Copy the full state of `other` into this env, in place. "
             "Equivalent to `env = other.copy()`."
+        )
+
+        // raw bytes of env, no headers (PPUState + RAM)
+        .def("save_state",
+            [](const SMBEnv& env) {
+                const size_t size = sizeof(SMBEnv);
+                auto* buffer = new uint8_t[size];
+                env.SaveState(buffer);
+
+                return Wrap(buffer, 1, &size);
+            },
+            "Return a new 1D uint8 array containing the full raw state (PPUState + RAM, `SMBEnv.SIZE_BYTES` bytes)."
+        )
+        // to buffer
+        .def("save_state",
+            [](const SMBEnv& env, StateOut out) {
+                if (out.size() != sizeof(SMBEnv)) {
+                    throw nb::value_error(
+                        ("bytes mismatch upon save_state(): found " + std::to_string(out.size()) +
+                         ", expected " + std::to_string(sizeof(SMBEnv))).c_str()
+                    );
+                }
+
+                env.SaveState(out.data());
+            },
+            nb::arg("out").noconvert(),
+            "Dump the full raw state (`SMBEnv.SIZE_BYTES` bytes) into a preallocated 1D uint8 array."
+        )
+        // from buffer
+        .def("load_state",
+            [](SMBEnv& env, StateIn state) {
+                env.LoadState(state.data(), state.size());
+            },
+            nb::arg("state").noconvert(),
+            "Restore the full raw state (PPUState + RAM) from a 1D uint8 array."
+        )
+        // from bytes
+        .def("load_state",
+            [](SMBEnv& env, nb::bytes state) {
+                env.LoadState(reinterpret_cast<const uint8_t*>(state.c_str()), state.size());
+            },
+            "state"_a,
+            "Restore the full raw state (PPUState + RAM) from a bytes object."
         );
 }
