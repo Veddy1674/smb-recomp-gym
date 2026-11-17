@@ -2,13 +2,19 @@
 #include <smb/core/env.hpp>
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 struct SMBEnvVec {
     static constexpr size_t RamSize = sizeof(SMBEnv::ram);
 
-    explicit SMBEnvVec(size_t count) : envs(count) {}
+    explicit SMBEnvVec(size_t count) : envs(count) {
+        if (count <= 0)
+            throw std::invalid_argument(
+                "created a SMBEnvVec with less than 1 envs (found " + std::to_string(count) + ")");
+    }
 
     size_t Size() const noexcept {
         return envs.size();
@@ -90,6 +96,40 @@ struct SMBEnvVec {
         return output;
     }
 
+    // copies every env's raw state into 'output' buffer, must be this->Size() * sizeof(SMBEnv) bytes
+    void SaveStateAll(uint8_t* output) const noexcept {
+        std::memcpy(output, envs.data(), envs.size() * sizeof(SMBEnv));
+    }
+
+    std::vector<uint8_t> SaveStateAll() const {
+        std::vector<uint8_t> output(envs.size() * sizeof(SMBEnv));
+        SaveStateAll(output.data());
+
+        return output;
+    }
+
+    // restores every env's raw state from 'data', throwing if 'size' != this->Size() * sizeof(SMBEnv)
+    void LoadStateAll(const uint8_t* data, size_t size) {
+        const size_t expected = envs.size() * sizeof(SMBEnv);
+
+        if (size != expected) {
+            std::string foundEnvs;
+            if (size % sizeof(SMBEnv) == 0)
+                foundEnvs = " (" + std::to_string(size / sizeof(SMBEnv)) + " envs)";
+
+            throw std::invalid_argument(
+                "bytes mismatch upon LoadStateAll(): found " + std::to_string(size) + foundEnvs +
+                ", expected " + std::to_string(expected) + " (" + std::to_string(envs.size()) + " envs)"
+            );
+        }
+
+        std::memcpy(envs.data(), data, expected);
+    }
+
+    void LoadStateAll(const std::vector<uint8_t>& state) {
+        LoadStateAll(state.data(), state.size());
+    }
+
     // copies every env independently
     SMBEnvVec Copy() const {
         return *this;
@@ -108,7 +148,7 @@ struct SMBEnvVec {
     }
 
 private:
-    std::vector<SMBEnv> envs; // AoS, multiple of 64
+    std::vector<SMBEnv> envs; // AoS, multiple of 64 bytes
 
     // (helper for RAM-related utilities and such)
     // not parallel on purpose, since reading a few bytes per env is faster
