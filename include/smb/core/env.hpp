@@ -6,6 +6,10 @@
 #include <cstddef>
 #include <cstring>
 #include <array>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <vector>
 
 // high-level aliases
 namespace Input {
@@ -175,6 +179,34 @@ struct alignas(64) SMBEnv {
         return *this;
     }
 
+    // copies raw state (PPUState + RAM, sizeof(SMBEnv) bytes) into 'out' buffer
+    void SaveState(uint8_t* out) const noexcept {
+        std::memcpy(out, this, sizeof(SMBEnv));
+    }
+
+    std::vector<uint8_t> SaveState() const {
+        std::vector<uint8_t> out(sizeof(SMBEnv));
+        SaveState(out.data());
+
+        return out;
+    }
+
+    // restores raw state from 'data', throwing if 'size' != sizeof(SMBEnv)
+    void LoadState(const uint8_t* data, size_t size) {
+        if (size != sizeof(SMBEnv)) {
+            throw std::invalid_argument(
+                "bytes mismatch upon LoadState(): found " + std::to_string(size) +
+                ", expected " + std::to_string(sizeof(SMBEnv))
+            );
+        }
+
+        std::memcpy(this, data, sizeof(SMBEnv));
+    }
+
+    void LoadState(const std::vector<uint8_t>& state) {
+        LoadState(state.data(), state.size());
+    }
+
     SMBEnv() noexcept = default;
 
     bool operator==(const SMBEnv& other) const noexcept {
@@ -202,3 +234,5 @@ private:
     void FirstReset() noexcept; // called once in ResetPresets() init
     void NMI(uint8_t input) noexcept; // used by Step()
 };
+
+static_assert(std::is_trivially_copyable_v<SMBEnv>, "SMBEnv must be trivially copyable for SaveState/LoadState");
