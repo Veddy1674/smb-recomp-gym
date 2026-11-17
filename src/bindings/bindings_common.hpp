@@ -76,6 +76,8 @@ inline RenderMode ParseRenderMode(std::string_view name) {
 // numpy aliases:
 using Frame = nb::ndarray<nb::numpy, uint8_t>;
 using Buffer = nb::ndarray<uint8_t, nb::c_contig, nb::device::cpu>; // for rendering functions
+using StateOut = nb::ndarray<uint8_t, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
+using StateIn = nb::ndarray<const uint8_t, nb::ndim<1>, nb::c_contig, nb::device::cpu>;
 
 // same, but the shape comes from a runtime ndim + pointer (e.g. a std::vector)
 template <typename T>
