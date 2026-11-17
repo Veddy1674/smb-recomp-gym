@@ -105,6 +105,12 @@ void BindSMBEnvVec(nb::module_& m) {
             "Create `n_envs` environments in a batch, natively managed in C++."
         )
 
+        .def_prop_ro("SIZE_BYTES_ALL",
+            [](const SMBEnvVec& vec) {
+                return vec.Size() * sizeof(SMBEnv);
+            },
+            "Total raw state size in bytes across all environments (`n_envs` * `SMBEnv.SIZE_BYTES`)."
+        )
         .def_prop_ro("n_envs", &SMBEnvVec::Size,
             "Number of environments, initialized in the constructor."
         )
@@ -220,7 +226,7 @@ void BindSMBEnvVec(nb::module_& m) {
             [](const SMBEnvVec& vec, Buffer out, std::string_view mode) {
                 FrameAllInto(vec, out, ParseRenderMode(mode));
             },
-            nb::arg("out").noconvert(),
+            nb::arg("out").noconvert(), // avoid silent copies
             "render_mode"_a = "rgb",
             "Render all envs into a preallocated array. Shape (n_envs, H, W, 3) for rgb, (n_envs, H, W) otherwise."
         )
@@ -342,5 +348,65 @@ void BindSMBEnvVec(nb::module_& m) {
             "index"_a, "env"_a,
             "Copy the full state of `env` into env `index`, in place. "
             "Raises IndexError if the index is out of range."
+        )
+
+        // sequential raw bytes of all envs, no headers
+        .def("save_state_all",
+            [](const SMBEnvVec& vec) {
+                const size_t totalBytes = vec.Size() * sizeof(SMBEnv);
+                auto* buffer = new uint8_t[totalBytes];
+
+                {
+                    nb::gil_scoped_release release;
+                    vec.SaveStateAll(buffer);
+                }
+
+                return Wrap(buffer, 1, &totalBytes);
+            },
+            "Return a new 1D uint8 array containing every env's raw state sequentially (`self.SIZE_BYTES_ALL` bytes)."
+        )
+        // to buffer
+        .def("save_state_all",
+            [](const SMBEnvVec& vec, StateOut out) {
+                const size_t expected = vec.Size() * sizeof(SMBEnv);
+
+                if (out.size() != expected) {
+                    std::string foundEnvs;
+
+                    if (out.size() % sizeof(SMBEnv) == 0)
+                        foundEnvs = " (" + std::to_string(out.size() / sizeof(SMBEnv)) + " envs)";
+
+                    throw nb::value_error(
+                        ("bytes mismatch upon save_state_all(): found " + std::to_string(out.size()) + foundEnvs +
+                         ", expected " + std::to_string(expected) + " (" + std::to_string(vec.Size()) + " envs)").c_str()
+                    );
+                }
+
+                nb::gil_scoped_release release;
+                vec.SaveStateAll(out.data());
+            },
+            nb::arg("out").noconvert(), // avoid silent copies
+            "Dump every env's raw state (`self.SIZE_BYTES_ALL` bytes) sequentially into a preallocated 1D uint8 array."
+        )
+        // from buffer
+        .def("load_state_all",
+            [](SMBEnvVec& vec, StateIn state) {
+                nb::gil_scoped_release release;
+                vec.LoadStateAll(state.data(), state.size());
+            },
+            nb::arg("state").noconvert(), // avoid silent copies
+            "Restore every env's raw state from a 1D uint8 array."
+        )
+        // from bytes
+        .def("load_state_all",
+            [](SMBEnvVec& vec, nb::bytes state) {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(state.c_str());
+                const size_t size = state.size();
+
+                nb::gil_scoped_release release;
+                vec.LoadStateAll(data, size);
+            },
+            "state"_a,
+            "Restore every env's raw state from a bytes object."
         );
 }
