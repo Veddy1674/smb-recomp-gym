@@ -64,6 +64,28 @@ struct SMBEnvVec {
     // parallel, 'buffer' holds this->Size() * FrameBytesOf(renderMode) bytes
     void RenderFrameAll(uint8_t* buffer, RenderMode renderMode) const noexcept;
 
+    // 'buffers' has one RGBA output buffer per env; nullptr is allowed for invisible sprites
+    std::vector<Sprite> RenderSpriteAll(uint8_t* const* buffers, int firstSlot, int count) const {
+        std::vector<Sprite> sprites;
+        sprites.reserve(envs.size());
+
+        for (size_t i = 0; i < envs.size(); i++)
+            sprites.push_back(envs[i].RenderSprite(buffers[i], firstSlot, count));
+
+        return sprites;
+    }
+
+    // 'buffers' has one RGBA output buffer per env; nullptr is allowed for invisible sprites
+    std::vector<Sprite> RenderSpriteMarioAll(uint8_t* const* buffers) const {
+        std::vector<Sprite> sprites;
+        sprites.reserve(envs.size());
+
+        for (size_t i = 0; i < envs.size(); i++)
+            sprites.push_back(envs[i].RenderSpriteMario(buffers[i]));
+
+        return sprites;
+    }
+
     // "ValidateInputAll" wasn't implemented because it's mostly useless; it's barely useful for SMBEnv alone
 
     // utilities used for RL and such (not parallel)
