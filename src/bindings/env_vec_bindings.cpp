@@ -1,4 +1,5 @@
 #include "bindings_common.hpp"
+#include <memory>
 
 // used by SMBEnvVec, in an anonymous namespace so they stay private to this file
 namespace {
@@ -32,6 +33,48 @@ static void FrameAllInto(const SMBEnvVec& vec, Buffer out, RenderMode mode) {
 
     nb::gil_scoped_release release;
     vec.RenderFrameAll(out.data(), mode);
+}
+
+static std::vector<size_t> SpriteShape(const Sprite& sprite) {
+    return {size_t(sprite.height), size_t(sprite.width), 4}; // rgba
+}
+
+// batched "NewSprite"; sprite dimensions can differ between envs
+template <typename GetSprites, typename Render>
+static std::vector<std::tuple<std::optional<Frame>, int, int>> NewSpriteAll(
+    const SMBEnvVec& vec, GetSprites getSprites, Render render
+) {
+    std::vector<Sprite> bounds = getSprites();
+    std::vector<std::unique_ptr<uint8_t[]>> ownedBuffers(vec.Size());
+    std::vector<uint8_t*> buffers(vec.Size(), nullptr);
+
+    for (size_t i = 0; i < vec.Size(); i++) {
+        if (!bounds[i].exists())
+            continue;
+
+        const auto shape = SpriteShape(bounds[i]);
+        ownedBuffers[i] = std::make_unique<uint8_t[]>(shape[0] * shape[1] * 4);
+        std::memset(ownedBuffers[i].get(), 0, shape[0] * shape[1] * 4); // transparent background
+        buffers[i] = ownedBuffers[i].get();
+    }
+
+    const std::vector<Sprite> sprites = render(buffers.data());
+    std::vector<std::tuple<std::optional<Frame>, int, int>> result;
+    result.reserve(vec.Size());
+
+    for (size_t i = 0; i < vec.Size(); i++) {
+        if (!sprites[i].exists()) {
+            result.emplace_back(std::nullopt, sprites[i].x, sprites[i].y);
+            continue;
+        }
+
+        const auto shape = SpriteShape(sprites[i]);
+        result.emplace_back(
+            Wrap(ownedBuffers[i].release(), shape.size(), shape.data()), sprites[i].x, sprites[i].y
+        );
+    }
+
+    return result;
 }
 
 // 1D uint8 array of actions
@@ -238,6 +281,47 @@ void BindSMBEnvVec(nb::module_& m) {
             },
             "render_mode"_a = "rgb",
             "Render all envs into a new array."
+        )
+
+        // returns (rgba image, x, y) for each env
+        .def("render_sprite_all",
+            [](const SMBEnvVec& vec, int firstSlot, int count) {
+                return NewSpriteAll(
+                    vec,
+                    [&] {
+                        std::vector<Sprite> sprites;
+                        sprites.reserve(vec.Size());
+                        for (size_t i = 0; i < vec.Size(); i++)
+                            sprites.push_back(vec.At(i)._GetSprite(firstSlot, count));
+                        return sprites;
+                    },
+                    [&](uint8_t* const* buffers) {
+                        return vec.RenderSpriteAll(buffers, firstSlot, count);
+                    }
+                );
+            },
+            "first_slot"_a, "count"_a,
+            "Render `count` OAM sprites for every env. Returns a list of `(rgba_image, x, y)` tuples; `rgba_image` has shape `(h, w, 4)` or is `None` if not visible."
+        )
+
+        // returns (rgba image, x, y) for each env
+        .def("render_sprite_mario_all",
+            [](const SMBEnvVec& vec) {
+                return NewSpriteAll(
+                    vec,
+                    [&] {
+                        std::vector<Sprite> sprites;
+                        sprites.reserve(vec.Size());
+                        for (size_t i = 0; i < vec.Size(); i++)
+                            sprites.push_back(vec.At(i)._GetSpriteMario());
+                        return sprites;
+                    },
+                    [&](uint8_t* const* buffers) {
+                        return vec.RenderSpriteMarioAll(buffers);
+                    }
+                );
+            },
+            "Returns a list of rendered Mario sprites as `(rgba_image, x, y)` tuples; each image has shape `(h, w, 4)` or is `None` if not visible."
         )
 
         // zero-copy view, rows are sizeof(SMBEnv) bytes apart
